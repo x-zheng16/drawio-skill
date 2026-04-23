@@ -137,6 +137,83 @@ Once the user approves:
 - **Auto-launch:** offer to open the `.drawio` file in draw.io desktop for fine-tuning — `open diagram.drawio` (macOS), `xdg-open` (Linux), `start` (Windows)
 - Confirm files are saved and ready to use
 
+## Style Presets
+
+A **style preset** is a named JSON file that captures a user's visual preferences — palette, shape vocabulary, fonts, edge style. When a preset is active, it fully replaces the built-in conventions in the `### Applying a preset` subsection above.
+
+**Locations, in lookup order:**
+1. `~/.drawio-skill/styles/<name>.json` — user presets (survive `git pull`).
+2. `<this-skill-dir>/styles/built-in/<name>.json` — built-ins shipped with the skill (`default`, `corporate`, `handdrawn`).
+
+A user preset shadows a built-in of the same name.
+
+Only user presets can have `"default": true`. When the user says *"make `<built-in-name>` my default"*, copy the built-in JSON to `~/.drawio-skill/styles/<name>.json` first, then set `default: true` on the copy — leave the shipped built-in untouched.
+
+**Name normalisation:** always lowercase the user-provided name before writing or looking up files (the preset schema enforces lowercase; uppercase names will fail validation).
+
+### Learn flow
+
+**Triggers:** "learn my style from `<path>` as `<name>`", "save this as `<name>` style", "remember this style as `<name>`".
+
+**Dispatch by file extension:**
+- `.drawio`, `.xml` → XML path
+- `.png`, `.jpg`, `.jpeg` → image path
+
+**Steps:**
+
+1. **Load the extraction reference.** Read `references/style-extraction.md` into context.
+2. **Extract** following the XML path or image path procedure in the reference.
+3. **Lowercase the name.** Apply `name.toLowercase()` (or equivalent) to the user-provided preset name before writing any file.
+4. **Build a candidate preset** and write it to `/tmp/drawio-preset-<name>.json`. Do **not** save to `~/.drawio-skill/styles/<name>.json` yet.
+5. **Render a sample** using the sample-diagram skeleton in `references/style-extraction.md`, parameterized by the candidate preset. Export PNG to `./preset-<name>-sample.png` using the same `draw.io -x -f png -e -s 2 -o ./preset-<name>-sample.png /tmp/drawio-preset-<name>.drawio` command the main workflow uses.
+6. **Show the user:**
+   - Preset summary table (palette hex values, shapes per role, font, edge style, extras).
+   - The sample PNG path (and embed the image if the environment supports it).
+   - Provenance line: `source.type`, `source.path`, `extracted_at`, `confidence`.
+7. **Wait for approval:**
+   - "save" / "looks good" → write candidate to `~/.drawio-skill/styles/<name>.json`. Create `~/.drawio-skill/styles/` if it doesn't exist. Delete tempfile and sample PNG.
+   - "change `<field>` to `<value>`" → edit the in-memory candidate, re-render, re-ask.
+   - "cancel" / "abort" / "no" → delete tempfile and sample PNG; nothing saved.
+
+**Error behavior:**
+
+| Failure | Behavior |
+|---|---|
+| Source path does not exist | Stop; report path not found. |
+| XML parse fails | Stop; report the parse error; suggest opening the file in drawio desktop to repair. |
+| Image vision unavailable | Stop; tell user to re-run on a vision-capable model or provide the `.drawio` file. |
+| Extraction yields 0 vertices / shapes | Stop; refuse to save. |
+| Extraction yields <3 distinct color pairs | Continue; mark `confidence: "low"` (image) or `"medium"` (XML); warn in summary. |
+| Preset name collides with existing user preset | Ask: overwrite, or pick a new name. |
+| Preset name collides with a built-in preset | Save to user dir (shadows the built-in); warn once. |
+| Sample render fails | Still show summary; note "could not render sample — saving on your OK anyway". |
+
+### Management operations
+
+All operations are natural language — no slash commands.
+
+| User says | Agent does |
+|---|---|
+| "list my styles", "what styles do I have", "show me my style presets" | Read `~/.drawio-skill/styles/` and `<this-skill-dir>/styles/built-in/`. Print a table: `name`, `location` (user/built-in), `source.type`, `confidence`, `default` flag. Built-ins shadowed by a user preset are marked so. |
+| "show my `<name>` style", "what's in `<name>`" | Print the preset JSON (pretty-printed) + a one-line summary (source, confidence, is-default). |
+| "make `<name>` the default", "set `<name>` as default" | If `<name>` is a user preset: set `default: true` on it; clear `default` on any other user preset that had it; save both files. If `<name>` is a built-in: copy `<this-skill-dir>/styles/built-in/<name>.json` → `~/.drawio-skill/styles/<name>.json` first, then set `default: true` on the copy. Never mutate the shipped built-in. |
+| "remove default", "unset default" | Clear `default: true` from whichever user preset has it. |
+| "delete `<name>`", "remove `<name>`" | Confirm first. Then `rm ~/.drawio-skill/styles/<name>.json`. Refuse to delete files under `<this-skill-dir>/styles/built-in/` — suggest shadowing with a user preset of the same name. |
+| "rename `<a>` to `<b>`" | `mv ~/.drawio-skill/styles/<a>.json ~/.drawio-skill/styles/<b>.json`, then update the `name` field inside. Fails if `<a>` is a built-in (offer to copy-then-rename instead). |
+| "learn my style from `<path>` as `<name>`" | Dispatch to the Learn flow above. |
+
+### Preset file validation
+
+When loading any preset (for generation or management), do a lightweight structural check:
+- Required top-level fields present (`name`, `version`, `palette`, `roles`, `shapes`, `font`, `edges`).
+- `version === 1`.
+- Every populated palette slot has both `fillColor` and `strokeColor` as `#RRGGBB`.
+- `confidence` ∈ {`"low"`, `"medium"`, `"high"`} if present.
+
+On validation failure:
+- **During generation:** warn the user, fall back to built-in conventions for this one diagram, do not mutate the file.
+- **During learn:** refuse to save the candidate; report which field failed.
+
 ## Draw.io XML Structure
 
 ### File skeleton
