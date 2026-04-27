@@ -5,7 +5,7 @@ license: MIT
 homepage: https://github.com/Agents365-ai/drawio-skill
 compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Self-check step requires a vision-enabled model (e.g., Claude Sonnet/Opus); gracefully skipped if unavailable.
 platforms: [macos, linux, windows]
-metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.4.0"}
+metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.4.2"}
 ---
 
 # Draw.io Diagrams
@@ -84,14 +84,16 @@ When a preset loads successfully, mention it in the first line of the reply: *"U
 1. **Check deps** — verify `draw.io --version` succeeds; note platform for correct CLI path
 2. **Plan** — identify shapes, relationships, layout (LR or TB), group by tier/layer
 3. **Generate** — write `.drawio` XML file to disk. Default output dir is the user's working dir; if the user specified an output path or directory (e.g. `./artifacts/`, `docs/images/`), use that instead — `mkdir -p` the target dir first. Apply the same dir choice to PNG/SVG/PDF exports in steps 4 and 7.
-4. **Export draft** — run CLI to produce PNG for preview
-5. **Self-check** — use the agent's built-in vision capability to read the exported PNG, catch obvious issues, auto-fix before showing user (requires a vision-enabled model such as Claude Sonnet/Opus)
+4. **Export draft** — run CLI to produce a preview PNG. **Do NOT pass `-e`** at this step — the embedded `zTXt mxGraphModel` chunk it adds causes vision APIs (Claude included) to return 400 "Could not process image" in step 5. Save the clean preview as `<name>.png` (single extension). Embedding is for the final export only (step 7).
+5. **Self-check** — use the agent's built-in vision capability to read the exported PNG, catch obvious issues, auto-fix before showing user (requires a vision-enabled model such as Claude Sonnet/Opus). If reading the PNG returns a 400 / "Could not process image" error, you almost certainly exported with `-e` by mistake — re-export without `-e` and retry once. If it still fails, skip self-check and continue to step 6.
 6. **Review loop** — show image to user, collect feedback, apply targeted XML edits, re-export, repeat until approved
-7. **Final export** — export approved version to all requested formats, report file paths
+7. **Final export** — re-export the approved version to all requested formats. Use `-e` here (PNG/SVG/PDF) so the deliverable stays editable in draw.io; save as `<name>.drawio.png` to signal embedded XML. **For PNG with `-e`, run the IEND repair snippet immediately after** — draw.io's CLI truncates the IEND chunk in `-e` PNG output (8 bytes missing), producing a corrupt file that vision APIs and strict PNG decoders reject (issue #9). See **Export → Post-export PNG repair**. Report file paths.
 
 ### Step 5: Self-Check
 
-After exporting the draft PNG, use the agent's vision capability (e.g., Claude's image input) to read the image and check for these issues before showing the user. If the agent does not support vision, skip self-check and show the PNG directly:
+After exporting the draft PNG, use the agent's vision capability (e.g., Claude's image input) to read the image and check for these issues before showing the user. If the agent does not support vision, skip self-check and show the PNG directly.
+
+**Important:** the draft PNG read here must have been exported **without** `-e`. Draw.io's `-e` flag injects a `zTXt mxGraphModel` chunk into the PNG that the Anthropic vision API rejects with 400 "Could not process image" (issue #8). If you see that error, re-export without `-e` and retry once; if it still fails (any other reason), skip self-check and proceed to step 6.
 
 | Check | What to look for | Auto-fix action |
 |-------|-----------------|-----------------|
@@ -125,7 +127,7 @@ After self-check, show the exported image and ask the user for feedback.
 **Rules:**
 - For single-element changes: edit existing XML in place — preserves layout tuning from prior iterations
 - For layout-wide changes (e.g., swap LR↔TB, "start over"): regenerate full XML
-- Overwrite the same `{name}.png` each iteration — do not create `v1`, `v2`, `v3` files
+- Overwrite the same `{name}.png` (no `-e`) each iteration — do not create `v1`, `v2`, `v3` files. `-e` is reserved for the final export in step 7.
 - After applying edits, re-export and show the updated image
 - Loop continues until user says approved / done / LGTM
 - **Safety valve:** after 5 iteration rounds, suggest the user open the `.drawio` file in draw.io desktop for fine-grained adjustments
@@ -425,11 +427,20 @@ When the Workflow's step *Resolve active preset* identified a preset, it fully r
 
 ### Commands
 
+There are **two** export modes:
+
+- **Preview / self-check** (step 4 of the workflow) — no `-e`. Output `diagram.png`. Required for vision self-check; using `-e` here triggers a 400 "Could not process image" error from the vision API (issue #8).
+- **Final / deliverable** (step 7) — pass `-e`. Output `diagram.drawio.png`. The embedded XML keeps the file editable in draw.io.
+
 ```bash
-# macOS — Homebrew (draw.io in PATH)
+# Preview PNG (use this in step 4, before self-check) — NO -e
+draw.io -x -f png -s 2 -o diagram.png input.drawio
+
+# Final PNG (step 7, after user approval) — WITH -e, double extension
 draw.io -x -f png -e -s 2 -o diagram.drawio.png input.drawio
 
-# macOS — full path (if not in PATH)
+# macOS — full path (if not in PATH); preview / final variants
+/Applications/draw.io.app/Contents/MacOS/draw.io -x -f png -s 2 -o diagram.png input.drawio
 /Applications/draw.io.app/Contents/MacOS/draw.io -x -f png -e -s 2 -o diagram.drawio.png input.drawio
 
 # Windows
@@ -438,20 +449,42 @@ draw.io -x -f png -e -s 2 -o diagram.drawio.png input.drawio
 # Linux (headless — requires xvfb-run)
 xvfb-run -a draw.io -x -f png -e -s 2 -o diagram.drawio.png input.drawio
 
-# SVG export
-draw.io -x -f svg -o diagram.svg input.drawio
+# SVG export (final — -e is safe; SVG is text)
+draw.io -x -f svg -e -o diagram.svg input.drawio
 
-# PDF export
-draw.io -x -f pdf -o diagram.pdf input.drawio
+# PDF export (final)
+draw.io -x -f pdf -e -o diagram.pdf input.drawio
 
 # Custom output directory (e.g. CI artifacts dir) — create if missing, then export there
 mkdir -p ./artifacts && draw.io -x -f png -e -s 2 -o ./artifacts/diagram.drawio.png input.drawio
 ```
 
+### Post-export PNG repair (required after `-e` PNG export)
+
+draw.io CLI truncates the IEND chunk when emitting `-e` PNGs — the file ends with the 4-byte IEND length field but the `IEND` type + CRC (8 bytes) are missing. Result: vision APIs return 400 "Could not process image" and strict PNG decoders error out. SVG/PDF are unaffected (no IEND chunk).
+
+Run this immediately after every `-e` PNG export:
+
+```bash
+python3 - "diagram.drawio.png" <<'PY'
+import sys
+p = sys.argv[1]
+data = open(p, 'rb').read()
+IEND = b'\x00\x00\x00\x00IEND\xaeB`\x82'
+if not data.endswith(IEND):
+    if data.endswith(b'\x00\x00\x00\x00'):  # truncated length field
+        data = data[:-4]
+    open(p, 'wb').write(data + IEND)
+    print(f"repaired {p}")
+PY
+```
+
+The `endswith(IEND)` guard makes this a no-op if draw.io fixes the bug upstream — safe to run unconditionally.
+
 **Key flags:**
 - `-x` — export mode (required)
 - `-f` — format: `png`, `svg`, `pdf`, `jpg`
-- `-e` — embed diagram XML in output (PNG, SVG, PDF only) — exported file remains editable in draw.io
+- `-e` — embed diagram XML in output (PNG, SVG, PDF) — exported file remains editable in draw.io. **Skip for the preview PNG used in step 5 self-check** — vision APIs reject PNGs with the embedded `zTXt mxGraphModel` chunk (issue #8).
 - `-s` — scale: `1`, `2`, `3` (2 recommended for PNG)
 - `-o` — output file path; accepts any directory (e.g. `./artifacts/diagram.drawio.png`) — `mkdir -p` the target dir first. Use `.drawio.png` double extension when embedding.
 - `-b` — border width around diagram (default: 0, recommend 10)
@@ -520,6 +553,8 @@ fi
 | `--` inside XML comments | Illegal per XML spec — use single hyphens or rephrase |
 | Arrowhead overlaps bend | Final edge segment before target must be ≥20px — increase spacing or add waypoints |
 | Literal `\n` in label text | Use `&#xa;` for line breaks in `value` attributes |
+| Vision returns 400 "Could not process image" on draft PNG | Re-export the preview without `-e` (issue #8). Root cause is actually a truncated IEND chunk in `-e` PNGs (issue #9), not the `zTXt` chunk itself — but the simplest fix for the preview is just to skip `-e`. |
+| Final `-e` PNG won't open in image viewers / vision APIs | Run the IEND repair snippet (Export → Post-export PNG repair). draw.io CLI emits `-e` PNGs with an 8-byte truncation at IEND. SVG/PDF unaffected. |
 
 ## Diagram Type Presets
 
