@@ -17,19 +17,6 @@
 - **样式预设（v1.3 新增）** — 用一个 `.drawio` 文件或图片"教会"Skill 你的风格，命名保存后可在后续图表中复用。详见 SKILL.md 的 `## Style Presets` 小节。
 - **自定义输出目录（v1.4 新增）** — 在提示里指定任意路径（如 `./artifacts/`、`docs/images/`），Skill 会自动 `mkdir -p` 并导出到那里；适合 CI/CD 产物流水线。
 
-## 多平台支持
-
-兼容所有主流支持 [Agent Skills](https://agentskills.io) 格式的 AI 编码智能体：
-
-| 平台 | 支持状态 | 说明 |
-|------|----------|------|
-| **Claude Code** | ✅ 完全支持 | 原生 SKILL.md 格式 + 插件市场 (`/plugin install drawio`) |
-| **Opencode** | ✅ 完全支持 | 通过原生 `skill` 工具加载 SKILL.md，同时兼容 `.claude/skills/` 路径 |
-| **OpenClaw / ClawHub** | ✅ 完全支持 | `metadata.openclaw` 命名空间，依赖检测，ClawHub 安装器 |
-| **Hermes Agent** | ✅ 完全支持 | `metadata.hermes` 命名空间，标签分类，工具门控 |
-| **OpenAI Codex** | ✅ 完全支持 | 原生 SKILL.md 格式 |
-| **SkillsMP** | ✅ 可索引 | GitHub topics 已配置 |
-
 ## 对比
 
 ### 与无 skill 的原生智能体对比
@@ -137,98 +124,24 @@ xvfb-run -a drawio --version
 | **Windows** | 如不在 PATH 中，使用完整路径 |
 | **Linux** | 无头导出时命令前加 `xvfb-run -a` |
 
-## Skill 安装
-
-### Claude Code
+## 安装
 
 ```bash
-# 插件市场安装（推荐）
-/plugin marketplace add Agents365-ai/365-skills
-/plugin install drawio
+# 任意 Agent（Claude Code、Cursor、Copilot 等）
+npx skills add Agents365-ai/365-skills -g
 
-# 手动全局安装（所有项目可用）
+# 仅 Claude Code
+> /plugin marketplace add Agents365-ai/365-skills
+> /plugin install drawio
+```
+
+手动安装 —— 克隆到你的 Agent skills 目录：
+
+```bash
 git clone https://github.com/Agents365-ai/drawio-skill.git ~/.claude/skills/drawio-skill
-
-# 手动项目级安装
-git clone https://github.com/Agents365-ai/drawio-skill.git .claude/skills/drawio-skill
 ```
 
-### Opencode
-
-```bash
-# 全局安装（Opencode 原生路径）
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.config/opencode/skills/drawio-skill
-
-# 项目级安装
-git clone https://github.com/Agents365-ai/drawio-skill.git .opencode/skills/drawio-skill
-```
-
-Opencode 同时会读取 `~/.claude/skills/` 和 `.claude/skills/`，所以已有的 Claude Code 安装会被自动识别，无需重复 clone。
-
-### OpenClaw
-
-```bash
-# 通过 ClawHub 安装
-clawhub install drawio-pro-skill
-
-# 手动安装
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.openclaw/skills/drawio-skill
-
-# 项目级安装
-git clone https://github.com/Agents365-ai/drawio-skill.git skills/drawio-skill
-```
-
-### Hermes Agent
-
-```bash
-# 安装到 design 分类
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.hermes/skills/design/drawio-skill
-```
-
-或在 `~/.hermes/config.yaml` 中添加外部目录：
-
-```yaml
-skills:
-  external_dirs:
-    - ~/myskills/drawio-skill
-```
-
-### OpenAI Codex
-
-```bash
-# 用户级安装
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.agents/skills/drawio-skill
-
-# 项目级安装
-git clone https://github.com/Agents365-ai/drawio-skill.git .agents/skills/drawio-skill
-```
-
-### SkillsMP
-
-在 [SkillsMP](https://skillsmp.com/skills/agents365-ai-drawio-skill-skill-md) 浏览或使用 CLI：
-
-```bash
-skills install drawio-skill
-```
-
-### ClawHub
-
-在 [ClawHub](https://clawhub.ai/agents365-ai/drawio-pro-skill) 浏览或使用 CLI：
-
-```bash
-clawhub install drawio-pro-skill
-```
-
-### 安装路径总结
-
-| 平台 | 全局路径 | 项目路径 |
-|------|----------|----------|
-| Claude Code | `~/.claude/skills/drawio-skill/` | `.claude/skills/drawio-skill/` |
-| Opencode | `~/.config/opencode/skills/drawio-skill/`（同时读取 `~/.claude/skills/`） | `.opencode/skills/drawio-skill/`（同时读取 `.claude/skills/`） |
-| OpenClaw / ClawHub | `~/.openclaw/skills/drawio-skill/` | `skills/drawio-skill/` |
-| Hermes Agent | `~/.hermes/skills/design/drawio-skill/` | 通过 `external_dirs` 配置 |
-| OpenAI Codex | `~/.agents/skills/drawio-skill/` | `.agents/skills/drawio-skill/` |
-| SkillsMP | N/A（通过 CLI 安装） | N/A |
+常用路径：`~/.claude/skills/`（Claude Code）、`~/.config/opencode/skills/`（Opencode）、`~/.openclaw/skills/`（OpenClaw）、`~/.agents/skills/`（Codex）。同时已索引于 [SkillsMP](https://skillsmp.com/skills/agents365-ai-drawio-skill-skill-md) 和 [ClawHub](https://clawhub.ai/agents365-ai/drawio-pro-skill)。
 
 ## 更新
 

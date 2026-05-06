@@ -17,19 +17,6 @@
 - **Style presets (v1.3 new)** — teach the skill your visual style from a `.drawio` file or image, save it by name, and apply it to future diagrams. See `## Style Presets` in SKILL.md.
 - **Custom output directory (v1.4 new)** — ask for any output path (e.g. `./artifacts/`, `docs/images/`) and the skill will `mkdir -p` and export there; ideal for CI/CD artifact pipelines.
 
-## Multi-Platform Support
-
-Works with all major AI coding agents that support the [Agent Skills](https://agentskills.io) format:
-
-| Platform | Status | Details |
-|----------|--------|---------|
-| **Claude Code** | ✅ Full support | Native SKILL.md format + plugin marketplace (`/plugin install drawio`) |
-| **Opencode** | ✅ Full support | Native SKILL.md via `skill` tool; also reads `.claude/skills/` paths |
-| **OpenClaw / ClawHub** | ✅ Full support | `metadata.openclaw` namespace, dependency gating, ClawHub installer |
-| **Hermes Agent** | ✅ Full support | `metadata.hermes` namespace, tags, tool gating |
-| **OpenAI Codex** | ✅ Full support | Native SKILL.md format |
-| **SkillsMP** | ✅ Indexed | GitHub topics configured |
-
 ## Comparison
 
 ### vs No Skill (native agent)
@@ -137,98 +124,24 @@ xvfb-run -a drawio --version
 | **Windows** | Use full path if not in PATH |
 | **Linux** | Wrap commands with `xvfb-run -a` for headless export |
 
-## Skill Installation
-
-### Claude Code
+## Installation
 
 ```bash
-# Plugin marketplace (recommended)
-/plugin marketplace add Agents365-ai/365-skills
-/plugin install drawio
+# Any agent (Claude Code, Cursor, Copilot, etc.)
+npx skills add Agents365-ai/365-skills -g
 
-# Manual global install
+# Claude Code only
+> /plugin marketplace add Agents365-ai/365-skills
+> /plugin install drawio
+```
+
+Manual install — clone into your agent's skills directory:
+
+```bash
 git clone https://github.com/Agents365-ai/drawio-skill.git ~/.claude/skills/drawio-skill
-
-# Manual project-level install
-git clone https://github.com/Agents365-ai/drawio-skill.git .claude/skills/drawio-skill
 ```
 
-### Opencode
-
-```bash
-# Global install (Opencode-native path)
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.config/opencode/skills/drawio-skill
-
-# Project-level install
-git clone https://github.com/Agents365-ai/drawio-skill.git .opencode/skills/drawio-skill
-```
-
-Opencode also reads `~/.claude/skills/` and `.claude/skills/`, so an existing Claude Code install is automatically picked up — no second clone needed.
-
-### OpenClaw
-
-```bash
-# Via ClawHub
-clawhub install drawio-pro-skill
-
-# Manual install
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.openclaw/skills/drawio-skill
-
-# Project-level install
-git clone https://github.com/Agents365-ai/drawio-skill.git skills/drawio-skill
-```
-
-### Hermes Agent
-
-```bash
-# Install under design category
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.hermes/skills/design/drawio-skill
-```
-
-Or add an external directory in `~/.hermes/config.yaml`:
-
-```yaml
-skills:
-  external_dirs:
-    - ~/myskills/drawio-skill
-```
-
-### OpenAI Codex
-
-```bash
-# User-level install
-git clone https://github.com/Agents365-ai/drawio-skill.git ~/.agents/skills/drawio-skill
-
-# Project-level install
-git clone https://github.com/Agents365-ai/drawio-skill.git .agents/skills/drawio-skill
-```
-
-### SkillsMP
-
-Browse on [SkillsMP](https://skillsmp.com/skills/agents365-ai-drawio-skill-skill-md) or use the CLI:
-
-```bash
-skills install drawio-skill
-```
-
-### ClawHub
-
-Browse on [ClawHub](https://clawhub.ai/agents365-ai/drawio-pro-skill) or use the CLI:
-
-```bash
-clawhub install drawio-pro-skill
-```
-
-### Installation paths summary
-
-| Platform | Global path | Project path |
-|----------|-------------|--------------|
-| Claude Code | `~/.claude/skills/drawio-skill/` | `.claude/skills/drawio-skill/` |
-| Opencode | `~/.config/opencode/skills/drawio-skill/` (also reads `~/.claude/skills/`) | `.opencode/skills/drawio-skill/` (also reads `.claude/skills/`) |
-| OpenClaw / ClawHub | `~/.openclaw/skills/drawio-skill/` | `skills/drawio-skill/` |
-| Hermes Agent | `~/.hermes/skills/design/drawio-skill/` | Via `external_dirs` config |
-| OpenAI Codex | `~/.agents/skills/drawio-skill/` | `.agents/skills/drawio-skill/` |
-| SkillsMP | N/A (installed via CLI) | N/A |
+Common paths: `~/.claude/skills/` (Claude Code), `~/.config/opencode/skills/` (Opencode), `~/.openclaw/skills/` (OpenClaw), `~/.agents/skills/` (Codex). Also indexed on [SkillsMP](https://skillsmp.com/skills/agents365-ai-drawio-skill-skill-md) and [ClawHub](https://clawhub.ai/agents365-ai/drawio-pro-skill).
 
 ## Updates
 
