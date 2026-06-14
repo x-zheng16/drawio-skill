@@ -1,0 +1,9 @@
+{
+  "name": "drawio-skill",
+  "description": "Generate draw.io (.drawio) diagrams — flowcharts, architecture, ERD, UML/sequence/class, network topology, ML/DL model figures, mind maps — and export PNG/SVG/PDF/JPG via the native draw.io desktop CLI. Rich shape vocabulary, style presets, Graphviz autolayout, import-graph extraction for Python/JS/Go/Rust.",
+  "version": "1.14.0",
+  "author": {
+    "name": "Agents365-ai"
+  },
+  "homepage": "https://github.com/Agents365-ai/drawio-skill"
+}
